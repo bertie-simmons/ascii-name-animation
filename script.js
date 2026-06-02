@@ -5,18 +5,18 @@ const GRID_COLOR = "#171717";
 const CHAR_COLOR = "#dadada";
 const ASCII_CHARS = ".:#@0369";
 const THRESHOLD = 0.5;
-const PUSH_RADIUS = 10;
-const PUSH_FORCE = 0.2;
-const SPRING = 0.08;
-const DAMPING = 0.85;
+const PUSH_RADIUS = 5;
+const PUSH_FORCE = 30;
+const SPRING = 0.025;
+const DAMPING = 0.5;
 
 const canvas = document.getElementById("grid");
 const ctx = canvas.getContext("2d", { alpha: true });
 const dpr = window.devicePixelRatio || 1;
 const nameImg = document.getElementById("source");
 
-let cols = 0,
-    rows = 0,
+let cols,
+    rows,
     cells = [];
 
 function setupCanvas() {
@@ -45,8 +45,8 @@ drawGrid();
 
 function sampleNameIntoCells() {
     const rect = nameImg.getBoundingClientRect();
-    const nameCols = Math.max(1, Math.ceil(rect.width / CELL_STEP));
-    const nameRows = Math.max(1, Math.ceil(rect.height / CELL_STEP));
+    const nameCols = Math.ceil(rect.width / CELL_STEP);
+    const nameRows = Math.ceil(rect.height / CELL_STEP);
     const startCol = Math.floor(rect.left / CELL_STEP);
     const startRow = Math.floor(rect.top / CELL_STEP);
 
@@ -111,20 +111,12 @@ function renderFrame() {
     }
 
     ctx.fillStyle = CHAR_COLOR;
-    for (const cell of cells) {
-        if (!cell.isLit) continue;
-        const x = colToX(cell.col) + (cell.offsetX || 0);
-        const y = rowToY(cell.row) + (cell.offsetY || 0);
-        ctx.fillText(cell.char, x + CELL_SIZE / 2, y);
+    for (const { col, row, char, isLit, offsetX, offsetY } of cells) {
+        if (!isLit) continue;
+        const x = (col + Math.round(offsetX)) * CELL_STEP;
+        const y = (row + Math.round(offsetY)) * CELL_STEP;
+        ctx.fillText(char, x + CELL_SIZE / 2, y);
     }
-}
-
-function colToX(col) {
-    return col * CELL_STEP;
-}
-
-function rowToY(row) {
-    return row * CELL_STEP;
 }
 
 function init() {
@@ -136,6 +128,8 @@ function init() {
 window.addEventListener("resize", init);
 nameImg.complete ? init() : nameImg.addEventListener("load", init);
 
+
+// flicker
 setInterval(() => {
     for (const cell of cells) {
         if (cell.isLit) cell.char = ASCII_CHARS[Math.floor(Math.random() * ASCII_CHARS.length)];
@@ -146,6 +140,8 @@ setInterval(() => {
 let mouse = { col: -999, row: -999, isMoving: false };
 let idleTimer = null;
 
+
+// physics
 function updatePhysics() {
     for (const cell of cells) { 
         if (!cell.isLit) continue;
